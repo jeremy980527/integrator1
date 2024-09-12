@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>整合網站連結</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .search-container {
+            position: absolute;
+            top: 120px; /* 調整搜尋框的垂直位置 */
+            width: 90%;
+            max-width: 500px;
+            display: flex;
+            justify-content: center;
+        }
+        .search-form {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+        }
+        .search-form input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 5px;
+            flex: 1;
+        }
+        .search-form button {
+            padding: 8px 12px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .search-form button:hover {
+            background-color: #0056b3;
+        }
+        .search-history {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 4px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none; /* 默認隱藏 */
+        }
+        .search-history div {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .search-history div:hover {
+            background: #f0f0f0;
+        }
+        .container {
+            background-color: #747474;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 900px; /* 增加寬度 */
+            height: 200px; /* 增加高度，使其為長方形 */
+            overflow-x: auto; /* 支持橫向滾動 */
+            overflow-y: hidden; /* 隱藏縱向滾動 */
+            white-space: nowrap; /* 不換行 */
+            margin-top: 20px; /* 確保不被搜尋框覆蓋 */
+            position: relative; /* 使內部絕對定位的元素參考此容器 */
+        }
+        .button-container {
+            display: inline-flex; /* 讓按鈕在同一行內顯示 */
+            gap: 10px;
+            height: 100%; /* 讓容器高度匹配父容器 */
+        }
+        .button-wrapper {
+            display: inline-block; /* 讓每個按鈕包裝器不換行顯示 */
+            width: 150px; /* 根據需要調整按鈕寬度 */
+            height: 80px; /* 根據需要調整按鈕高度 */
+            position: relative;
+        }
+        .button {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px #000;
+            box-sizing: border-box; /* 讓按鈕包含 padding 和 border */
+        }
+        .button:hover {
+            transform: scale(1.05); /* 調整 hover 放大效果 */
+            box-shadow: 0 6px #333;
+        }
+        .button:active {
+            transform: scale(1);
+            box-shadow: 0 2px #333;
+        }
+        .delete-button, .edit-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .edit-button {
+            background: #007bff;
+            right: 30px;
+        }
+        .form-container {
+            position: fixed;
+            bottom: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+        }
+        input[type="text"], input[type="color"] {
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <form class="search-form" id="searchForm">
+            <input type="text" id="searchInput" placeholder="Google 搜索" required>
+            <button type="button" onclick="performSearch()">搜尋</button>
+            <div class="search-history" id="searchHistory"></div>
+        </form>
+    </div>
+    <div class="container">
+        <div class="button-container" id="buttonContainer">
+            <!-- 按鈕會顯示在這裡 -->
+        </div>
+    </div>
+    <div class="form-container">
+        <input type="text" id="urlInput" placeholder="輸入網址">
+        <input type="text" id="titleInput" placeholder="按鈕標題">
+        <input type="color" id="colorInput" value="#ff0000">
+        <button onclick="addButton()">添加按鈕</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadButtons();
+            loadSearchHistory();
+        });
+
+        function performSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const term = searchInput.value.trim();
+            if (term) {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(term)}`, '_blank');
+                saveSearchTerm(term);
+            }
+        }
+
+        function saveSearchTerm(term) {
+            let searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
+            if (!searchHistory.includes(term)) {
+                searchHistory.push(term);
+                localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+            }
+        }
+
+        function loadSearchHistory() {
+            const searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
+            const searchHistoryContainer = document.getElementById('searchHistory');
+            const searchInput = document.getElementById('searchInput');
+
+            searchInput.addEventListener('focus', () => {
+                searchHistoryContainer.style.display = 'block';
+                searchHistoryContainer.innerHTML = '';
+                searchHistory.forEach(term => {
+                    const historyItem = document.createElement('div');
+                    historyItem.textContent = term;
+                    historyItem.onclick = () => {
+                        searchInput.value = term;
+                        performSearch();
+                    };
+                    searchHistoryContainer.appendChild(historyItem);
+                });
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!searchHistoryContainer.contains(event.target) && !searchInput.contains(event.target)) {
+                    searchHistoryContainer.style.display = 'none';
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                const currentValue = searchInput.value;
+                searchHistoryContainer.innerHTML = '';
+                searchHistory
+                    .filter(term => term.toLowerCase().includes(currentValue.toLowerCase()))
+                    .forEach(term => {
+                        const historyItem = document.createElement('div');
+                        historyItem.textContent = term;
+                        historyItem.onclick = () => {
+                            searchInput.value = term;
+                            performSearch();
+                        };
+                        searchHistoryContainer.appendChild(historyItem);
+                    });
+            });
+        }
+
+        function addButton() {
+            const urlInput = document.getElementById('urlInput');
+            const titleInput = document.getElementById('titleInput');
+            const colorInput = document.getElementById('colorInput');
+            const url = urlInput.value.trim();
+            const title = titleInput.value.trim();
+            const color = colorInput.value.trim();
+            
+            if (!url || !title) {
+                alert('請填寫所有欄位');
+                return;
+            }
+
+            try {
+                new URL(url); // Check if the URL is valid
+            } catch (_) {
+                alert('請輸入有效的網址');
+                return;
+            }
+
+            const buttonContainer = document.getElementById('buttonContainer');
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.className = 'button-wrapper';
+            
+            const newButton = document.createElement('a');
+            newButton.href = url;
+            newButton.className = 'button';
+            newButton.target = '_blank';
+            newButton.textContent = title;
+            newButton.style.backgroundColor = color;
+            
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-button';
+            deleteButton.textContent = 'X';
+            deleteButton.onclick = function() {
+                buttonWrapper.style.opacity = '0'; // Fade out
+                buttonWrapper.style.transform = 'scale(0.9)'; // Shrink
+                setTimeout(() => {
+                    buttonWrapper.remove(); // Remove after animation
+                    saveButtons(); // Save the state after removing
+                }, 300); // Match the duration of the fade-out transition
+            };
+
+            const editButton = document.createElement('button');
+            editButton.className = 'edit-button';
+            editButton.textContent = 'E';
+            editButton.onclick = function() {
+                const newTitle = prompt('請輸入新的按鈕標題:', title);
+                const newColor = prompt('請輸入新的按鈕顏色（十六進制顏色碼）:', color);
+                if (newTitle !== null) {
+                    newButton.textContent = newTitle;
+                    titleInput.value = newTitle; // Update form input
+                }
+                if (newColor !== null) {
+                    newButton.style.backgroundColor = newColor;
+                    colorInput.value = newColor; // Update form input
+                }
+                saveButtons(); // Save the state after editing
+            };
+
+            buttonWrapper.appendChild(newButton);
+            buttonWrapper.appendChild(deleteButton);
+            buttonWrapper.appendChild(editButton);
+            buttonContainer.appendChild(buttonWrapper);
+
+            urlInput.value = '';
+            titleInput.value = '';
+            saveButtons(); // Save the state after adding
+        }
+
+        function saveButtons() {
+            const buttonContainer = document.getElementById('buttonContainer');
+            const buttons = Array.from(buttonContainer.getElementsByClassName('button-wrapper')).map(buttonWrapper => {
+                const button = buttonWrapper.getElementsByClassName('button')[0];
+                return {
+                    url: button.href,
+                    title: button.textContent,
+                    color: button.style.backgroundColor
+                };
+            });
+            localStorage.setItem('buttons', JSON.stringify(buttons));
+        }
+
+        function loadButtons() {
+            const savedButtons = JSON.parse(localStorage.getItem('buttons'));
+            if (savedButtons) {
+                const buttonContainer = document.getElementById('buttonContainer');
+                savedButtons.forEach(buttonData => {
+                    const buttonWrapper = document.createElement('div');
+                    buttonWrapper.className = 'button-wrapper';
+                    
+                    const newButton = document.createElement('a');
+                    newButton.href = buttonData.url;
+                    newButton.className = 'button';
+                    newButton.target = '_blank';
+                    newButton.textContent = buttonData.title;
+                    newButton.style.backgroundColor = buttonData.color;
+                    
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'delete-button';
+                    deleteButton.textContent = 'X';
+                    deleteButton.onclick = function() {
+                        buttonWrapper.style.opacity = '0'; // Fade out
+                        buttonWrapper.style.transform = 'scale(0.9)'; // Shrink
+                        setTimeout(() => {
+                            buttonWrapper.remove(); // Remove after animation
+                            saveButtons(); // Save the state after removing
+                        }, 300); // Match the duration of the fade-out transition
+                    };
+
+                    const editButton = document.createElement('button');
+                    editButton.className = 'edit-button';
+                    editButton.textContent = 'E';
+                    editButton.onclick = function() {
+                        const newTitle = prompt('請輸入新的按鈕標題:', buttonData.title);
+                        const newColor = prompt('請輸入新的按鈕顏色（十六進制顏色碼）:', buttonData.color);
+                        if (newTitle !== null) {
+                            newButton.textContent = newTitle;
+                        }
+                        if (newColor !== null) {
+                            newButton.style.backgroundColor = newColor;
+                        }
+                        saveButtons(); // Save the state after editing
+                    };
+
+                    buttonWrapper.appendChild(newButton);
+                    buttonWrapper.appendChild(deleteButton);
+                    buttonWrapper.appendChild(editButton);
+                    buttonContainer.appendChild(buttonWrapper);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
